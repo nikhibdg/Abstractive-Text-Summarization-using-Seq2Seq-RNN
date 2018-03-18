@@ -19,6 +19,7 @@ This repository contains code for in progress Research Project - Abstractive Tex
 ### Ankur
 
 
-### Instructions:
 
-Please look at this [file](https://github.com/nikhibdg/Abstractive-Text-Summarization-using-Seq2Seq-RNN/blob/master/Dataset/create_word_vectors.md) file for details on converting text into word2vec (Glove vectors) and conversely from vec2word.
+## Instructions:
+
+Please look at this [file](https://github.com/nikhibdg/Abstractive-Text-Summarization-using-Seq2Seq-RNN/blob/master/Dataset/create_word_vectors.md) for details on converting text into word2vec (Glove vectors) and conversely from vec2word.
