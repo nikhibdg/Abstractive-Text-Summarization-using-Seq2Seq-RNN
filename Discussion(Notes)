@@ -1,0 +1,20 @@
+Date (03/20)
+
+6:00 pm
+Scanning up amazon food review data.
+Seeing difference between vector of Capitalise words and non capatilise words.
+"King" and "king" show huge dissamilarity. Hence not turning all the data to lower case.
+Discussion on truncate Backprop through time, creating block to manage TBPTT.
+
+Source input from pickle, we need to modify the input before passing it to the 
+encoders, which involves padding, bucketting.
+
+Find the lenfth of the input text, which involves matrices of size [x,50]
+where x denotes the length of the input paragraph, we pad it.
+
+Create blocks using bath iterator
+
+tensorflow datasets
+
+
+Start building encoder.
