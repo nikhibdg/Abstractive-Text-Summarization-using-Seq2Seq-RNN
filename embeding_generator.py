@@ -79,9 +79,9 @@ def vec2word(vec):
 
 # word = "king"
 # print("Vector representation of '"+str(vec2word(word2vec("kingdom")))+"':\n")
-# print(np.dot(np.array(word2vec("king")), np.array(word2vec("kingdom"))))
+print(np.dot(np.array(word2vec("king")), np.array(word2vec("King"))))
+print(np.dot(np.array(word2vec("king")), np.array(word2vec("king"))))
 # print(np.dot(np.array(word2vec("king")), np.array(word2vec("queen"))))
-
 
 vec_summaries = []
 
@@ -90,12 +90,12 @@ for summary in summaries:
     vec_summary = []
 
     for word in summary:
-        vec_summary.append(word2vec(word))
+        vec_summary.append(str(word2vec(word)).strip("[]"))
 
-    vec_summary.append(word2vec('eos'))
+    vec_summary.append(str(word2vec('eos')).strip("[]"))
 
-    vec_summary = np.asarray(vec_summary)
-    vec_summary = vec_summary.astype(np.float32)
+    vec_summary = ":".join(vec_summary)
+#    vec_summary = vec_summary.astype(np.float32)
 
     vec_summaries.append(vec_summary)
 
@@ -107,11 +107,11 @@ for text in texts:
     vec_text = []
 
     for word in text:
-        vec_text.append(word2vec(word))
+        vec_text.append(str(word2vec(word)).strip('[]'))
 
-    vec_text.append(word2vec('eos'))
-    vec_text = np.asarray(vec_text)
-    vec_text = vec_text.astype(np.float32)
+    vec_text.append(str(word2vec('eos')).strip("[]"))
+    vec_text = ":".join(vec_text)
+#    vec_text = vec_text.astype(np.float32)
 
     vec_texts.append(vec_text)
 
