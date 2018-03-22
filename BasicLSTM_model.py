@@ -70,15 +70,34 @@ iterator = dataset.make_initializable_iterator()
 y = iterator.get_next()
 
 
+# with tf.Session() as sess:
+#     sess.run(iterator.initializer, feed_dict={texts_placeholder: texts})
+#     res =sess.run(y)
+#     print(res[0].shape, res[1])
+#     res =sess.run(y)
+#     print(res[0].shape, res[1])
+#     res =sess.run(y)
+#     print(res[0].shape, res[1])
+#     res =sess.run(y)
+#     print(res[0].shape, res[1])
+#     res =sess.run(y)
+#     print(res[0].shape, res[1])
+
 with tf.Session() as sess:
     sess.run(iterator.initializer, feed_dict={texts_placeholder: texts})
-    res =sess.run(y)
-    print(res[0].shape, res[1])
-    res =sess.run(y)
-    print(res[0].shape, res[1])
-    res =sess.run(y)
-    print(res[0].shape, res[1])
-    res =sess.run(y)
-    print(res[0].shape, res[1])
-    res =sess.run(y)
-    print(res[0].shape, res[1])
+    res = sess.run(y)
+
+cell = tf.nn.rnn_cell.BasicLSTMCell(num_units=64)
+encder_output, encoder_state = tf.nn.dynamic_rnn(
+      cell=cell,
+      dtype=tf.float32,
+      sequence_length = res[1],
+      inputs = res[0])
+
+result = tf.contrib.learn.run_n(
+    {"outputs": encder_output, "last_states": encoder_state},
+    n=1,
+    feed_dict=None)
+
+
+print(result[0]["outputs"][2])
