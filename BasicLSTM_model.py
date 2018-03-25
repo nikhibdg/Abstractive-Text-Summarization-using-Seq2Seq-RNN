@@ -1,103 +1,116 @@
 import pickle
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.ops import lookup_ops
 
-texts = np.array(pickle.load(open("vec_texts", "rb")))
+emb_size = 50
+eos_id = 1
 
-print(texts.dtype)
+embedings = np.loadtxt("vocab_embedings.txt");
+vocab = np.loadtxt("vocab.txt", dtype="str");
 
-texts_placeholder = tf.placeholder(tf.string, shape=[None])
-dataset = tf.data.Dataset.from_tensor_slices((texts_placeholder))
+dict = {word: embeding for (word, embeding) in zip(vocab, embedings)}
+
+emb_mat = tf.constant(embedings)
+
+vocab = lookup_ops.index_table_from_file(
+  "vocab.txt", default_value= 0)
+
+
+src_dataset = tf.data.TextLineDataset("text.txt")
+tgt_dataset = tf.data.TextLineDataset("summary.txt")
+
+dataset = tf.data.Dataset.zip((src_dataset, tgt_dataset))
+
+#string to token
+dataset = dataset.map(
+  lambda src, tgt: (
+      tf.string_split([src]).values, tf.string_split([tgt]).values),
+  num_parallel_calls=2)
+
+#word to index
+dataset = dataset.map(
+  lambda src, tgt: (tf.cast(vocab.lookup(src), tf.int32),
+                    tf.cast(vocab.lookup(tgt), tf.int32)),
+  num_parallel_calls=2)
+
 
 dataset = dataset.map(
-    lambda src: (
-        tf.string_split([src], delimiter=":")).values,
-    num_parallel_calls=2)
+  lambda src, tgt: (src,
+                    tf.concat((tgt, [eos_id]), 0)),
+  num_parallel_calls=2)
 
+#add length
 dataset = dataset.map(
-    lambda src: (
-        tf.string_to_number(tf.map_fn(lambda x: tf.string_split([x], delimiter=" ").values, src), out_type=tf.float32)
-    ),
+    lambda src, summary: (
+        src, summary, tf.size(src), tf.size(summary)),
     num_parallel_calls=2)
-
-dataset = dataset.map(
-    lambda src: (
-        src, tf.cast(tf.divide(tf.size(src), 50), tf.int32)),
-    num_parallel_calls=2)
-
 
 def batching_func(x):
     return x.padded_batch(
         5, #batch size
         padded_shapes=(
-            tf.TensorShape([None,50]),  # src
+            tf.TensorShape([None]),  # src
+            tf.TensorShape([None]),
+            tf.TensorShape([]),
             tf.TensorShape([])),  # src_len
         padding_values=(
-            0.0,  # src
+            eos_id,  # src
+            eos_id,  # src
+            0,
             0))  # len
 
-num_buckets = 5
+# num_buckets = 5
+#
+# if num_buckets > 1:
+#
+#     def key_func(unused_1,unused_2,unused_3, src_len):
+#         # Calculate bucket_width by maximum source sequence length.
+#         # Pairs with length [0, bucket_width) go to bucket 0, length
+#         # [bucket_width, 2 * bucket_width) go to bucket 1, etc.  Pairs with length
+#         # over ((num_bucket-1) * bucket_width) words all go into the last bucket.
+#         # if src_max_len:
+#         #     bucket_width = (src_max_len + num_buckets - 1) // num_buckets
+#         # else:
+#         bucket_width = 10
+#
+#         # Bucket sentence pairs by the length of their source sentence and target
+#         # sentence.
+#         bucket_id = src_len // bucket_width
+#         return tf.to_int64(tf.minimum(num_buckets, bucket_id))
+#
+#
+#     def reduce_func(unused_key, windowed_data):
+#         return batching_func(windowed_data)
+#
+#
+#     dataset = dataset.apply(
+#         tf.contrib.data.group_by_window(
+#             key_func=key_func, reduce_func=reduce_func, window_size=5))
 
-if num_buckets > 1:
-
-    def key_func(unused_1, src_len):
-        # Calculate bucket_width by maximum source sequence length.
-        # Pairs with length [0, bucket_width) go to bucket 0, length
-        # [bucket_width, 2 * bucket_width) go to bucket 1, etc.  Pairs with length
-        # over ((num_bucket-1) * bucket_width) words all go into the last bucket.
-        # if src_max_len:
-        #     bucket_width = (src_max_len + num_buckets - 1) // num_buckets
-        # else:
-        bucket_width = 10
-
-        # Bucket sentence pairs by the length of their source sentence and target
-        # sentence.
-        bucket_id = src_len // bucket_width
-        return tf.to_int64(tf.minimum(num_buckets, bucket_id))
-
-
-    def reduce_func(unused_key, windowed_data):
-        return batching_func(windowed_data)
-
-
-    dataset = dataset.apply(
-        tf.contrib.data.group_by_window(
-            key_func=key_func, reduce_func=reduce_func, window_size=5))
-
-#dataset = batching_func(dataset)
+dataset = batching_func(dataset)
 
 iterator = dataset.make_initializable_iterator()
 y = iterator.get_next()
 
-
-# with tf.Session() as sess:
-#     sess.run(iterator.initializer, feed_dict={texts_placeholder: texts})
-#     res =sess.run(y)
-#     print(res[0].shape, res[1])
-#     res =sess.run(y)
-#     print(res[0].shape, res[1])
-#     res =sess.run(y)
-#     print(res[0].shape, res[1])
-#     res =sess.run(y)
-#     print(res[0].shape, res[1])
-#     res =sess.run(y)
-#     print(res[0].shape, res[1])
+#To get embedings
+encoder_emb_inp = tf.nn.embedding_lookup(
+          emb_mat, [1, 4, 5])
 
 with tf.Session() as sess:
-    sess.run(iterator.initializer, feed_dict={texts_placeholder: texts})
-    res = sess.run(y)
-
-cell = tf.nn.rnn_cell.BasicLSTMCell(num_units=64)
-encder_output, encoder_state = tf.nn.dynamic_rnn(
-      cell=cell,
-      dtype=tf.float32,
-      sequence_length = res[1],
-      inputs = res[0])
-
-result = tf.contrib.learn.run_n(
-    {"outputs": encder_output, "last_states": encoder_state},
-    n=1,
-    feed_dict=None)
+    sess.run(tf.tables_initializer())
+    sess.run(iterator.initializer, feed_dict=None)
+    res =sess.run(y)
+    print(res[0].shape, res)
+    res =sess.run(y)
+    print(res[0].shape, res)
+    res =sess.run(y)
+    print(res[0].shape, res)
+    res =sess.run(y)
+    print(res[0].shape, res)
+    res =sess.run(y)
+    print(res[0].shape, res)
 
 
-print(result[0]["outputs"][2])
+    res =sess.run(encoder_emb_inp)
+    print(res)

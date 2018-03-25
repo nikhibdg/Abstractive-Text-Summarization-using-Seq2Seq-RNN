@@ -1,5 +1,5 @@
 import numpy as np
-filename = 'glove.6B.50d.txt' 
+filename = 'glove.6B.50d.txt'
 
 
 def loadGloVe(filename):
@@ -32,14 +32,14 @@ texts = []
 def clean(text):
     text = text.lower()
     printable = set(string.printable)
-    return filter(lambda x: x in printable, text)     
+    return filter(lambda x: x in printable, text)
 
-with open('Reviews.csv', 'rb') as csvfile: 
+with open('Reviews.csv', 'rb') as csvfile:
     Reviews = csv.DictReader(csvfile)
     i = 0
     for row in Reviews:
         i +=1
-        if i==1000:
+        if i==100000:
             break
 
         clean_text = clean(row['Text'])
@@ -83,41 +83,47 @@ print(np.dot(np.array(word2vec("king")), np.array(word2vec("King"))))
 print(np.dot(np.array(word2vec("king")), np.array(word2vec("king"))))
 # print(np.dot(np.array(word2vec("king")), np.array(word2vec("queen"))))
 
-vec_summaries = []
+dataset_vocab = []
+dataset_vocab_embedings = []
+
+i = 0
+
+dataset_vocab.append('unk')
+dataset_vocab_embedings.append(word2vec('unk'))
+
+dataset_vocab.append('eos')
+dataset_vocab_embedings.append(word2vec('eos'))
 
 for summary in summaries:
-
-    vec_summary = []
-
+    i = i + 1
+    print(i)
     for word in summary:
-        vec_summary.append(str(word2vec(word)).strip("[]"))
+        if word not in dataset_vocab:
 
-    vec_summary.append(str(word2vec('eos')).strip("[]"))
+            dataset_vocab.append(word)
+            dataset_vocab_embedings.append(word2vec(word))
 
-    vec_summary = ":\n".join(vec_summary)
-#    vec_summary = vec_summary.astype(np.float32)
+i = 0
 
-    vec_summaries.append(vec_summary)
-
-
-vec_texts = []
+print("dataset vocal size::", len(dataset_vocab))
 
 for text in texts:
-
-    vec_text = []
-
+    i = i + 1
+    print(i)
     for word in text:
-        vec_text.append(str(word2vec(word)).strip('[]'))
+        if word not in dataset_vocab:
 
-    vec_text.append(str(word2vec('eos')).strip("[]"))
-    vec_text = ":".join(vec_text)
-#    vec_text = vec_text.astype(np.float32)
+            dataset_vocab.append(word)
+            dataset_vocab_embedings.append(word2vec(word))
 
-    vec_texts.append(vec_text)
+print("dataset vocal size::", len(dataset_vocab))
+
+np.savetxt('vocab.txt', dataset_vocab, delimiter='\n', fmt="%s")
+np.savetxt('vocab_embedings.txt', dataset_vocab_embedings, delimiter=' ')
 
 
-import pickle
-with open('vec_summaries', 'wb') as fp:
-    pickle.dump(vec_summaries, fp)
-with open('vec_texts', 'wb') as fp:
-    pickle.dump(vec_texts, fp)
+# import pickle
+# with open('dataset_vocab', 'wb') as fp:
+#     pickle.dump(dataset_vocab, fp)
+# with open('dataset_vocab_embedings', 'wb') as fp:
+#     pickle.dump(dataset_vocab_embedings, fp)
