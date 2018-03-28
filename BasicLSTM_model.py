@@ -147,10 +147,10 @@ with tf.Session() as sess:
     # Decoder
     decoder_cell = tf.nn.rnn_cell.BasicLSTMCell(num_units= 64)
 
-    projection_layer = Dense(units=vocab_size, use_bias=True)
+    projection_layer = Dense(units=vocab_size, use_bias=False)
 
     helper = tf.contrib.seq2seq.TrainingHelper(
-        embedded_labels, [max(labels_sequence_length) - 1 for _ in range(batch_size)]
+        embedded_labels, [max(labels_sequence_length) for _ in range(batch_size)]
         , time_major=False)
 
     decoder = tf.contrib.seq2seq.BasicDecoder(
@@ -170,6 +170,16 @@ with tf.Session() as sess:
     x = reverse_vocab.lookup(tf.constant(result[0].get('outputs').sample_id, tf.int64))
     print([[word.decode() for word in x] for x in sess.run(x)])
 
+
+    # calculate loss
+    logits = result[0].get('outputs').rnn_output
+    print("loggiiiittts :", logits.shape)
+    crossent = tf.nn.sparse_softmax_cross_entropy_with_logits(
+        labels=label_index, logits=logits)
+    train_loss = (tf.reduce_sum(crossent * labels_sequence_length) /
+                  batch_size)
+
+    print(train_loss.eval())
     # print(result[1].size)
 
     # res =sess.run(encoder_emb_inp)
