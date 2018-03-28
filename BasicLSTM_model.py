@@ -105,7 +105,7 @@ encoder_emb_inp = tf.nn.embedding_lookup(
 with tf.Session() as sess:
     sess.run(tf.tables_initializer())
     sess.run(iterator.initializer, feed_dict=None)
-    #res = sess.run(iterator.get_next())
+    # res = sess.run(iterator.get_next())
 
     # inputs_index = y[0]
 
@@ -150,7 +150,7 @@ with tf.Session() as sess:
     #
     # # Decoder
 
-    decoder_cell = tf.nn.rnn_cell.BasicLSTMCell(num_units= 64)
+    decoder_cell = tf.nn.rnn_cell.BasicLSTMCell(num_units=64)
 
     projection_layer = Dense(units=vocab_size, use_bias=False)
 
@@ -194,15 +194,23 @@ with tf.Session() as sess:
     # print("loggiiiittts :", logits.shape)
     crossent = tf.nn.sparse_softmax_cross_entropy_with_logits(
         labels=label_index, logits=logits)
-    train_loss = (tf.reduce_sum(tf.transpose(crossent)
-                                * tf.cast(labels_sequence_length, tf.float64)) /
+    train_loss = (tf.reduce_sum(crossent
+                                * tf.sequence_mask(labels_sequence_length, dtype=logits.dtype)) /
                   batch_size)
-
 
     sess.run(tf.global_variables_initializer())
     output = sess.run([train_loss], feed_dict=None)
     print(output)
-
+    output = sess.run([train_loss], feed_dict=None)
+    print(output)
+    output = sess.run([train_loss], feed_dict=None)
+    print(output)
+    output = sess.run([train_loss], feed_dict=None)
+    print(output)
+    output = sess.run([train_loss], feed_dict=None)
+    print(output)
+    output = sess.run([train_loss], feed_dict=None)
+    print(output)
 
     #
     # print(train_loss.eval())
