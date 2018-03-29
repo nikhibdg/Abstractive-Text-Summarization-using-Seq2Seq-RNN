@@ -198,19 +198,39 @@ with tf.Session() as sess:
                                 * tf.sequence_mask(labels_sequence_length, dtype=logits.dtype)) /
                   batch_size)
 
+    global_step = tf.Variable(0, trainable=False)
+    inc_gstep = tf.assign(global_step, global_step + 1)
+    learning_rate = tf.train.exponential_decay(
+        0.01, global_step, decay_steps=10, decay_rate=0.9, staircase=True)
+
+    # with tf.variable_scope('Adam'):
+    adam_optimizer = tf.train.AdamOptimizer(learning_rate)
+
+    adam_gradients, v = zip(*adam_optimizer.compute_gradients(train_loss))
+    adam_gradients, _ = tf.clip_by_global_norm(adam_gradients, 25.0)
+    adam_optimize = adam_optimizer.apply_gradients(zip(adam_gradients, v))
+    train_prediction = outputs.sample_id
+
     sess.run(tf.global_variables_initializer())
-    output = sess.run([train_loss], feed_dict=None)
-    print(output)
-    output = sess.run([train_loss], feed_dict=None)
-    print(output)
-    output = sess.run([train_loss], feed_dict=None)
-    print(output)
-    output = sess.run([train_loss], feed_dict=None)
-    print(output)
-    output = sess.run([train_loss], feed_dict=None)
-    print(output)
-    output = sess.run([train_loss], feed_dict=None)
-    print(output)
+
+    average_loss = 0;
+    for epoch in range(100):
+        sess.run(iterator.initializer, feed_dict=None)
+        average_loss = 0;
+        for step in range(1000):
+            _, l, pred, o_i = sess.run([adam_optimize, train_loss, train_prediction, label_index], feed_dict=None)
+            average_loss += l;
+            if step == 0:
+                print("step 1 loss::", l)
+            print(".", step)
+
+            if step % 100 == 0:
+                x = reverse_vocab.lookup(tf.constant(pred, tf.int64))
+                print(o_i)
+                print(pred)
+                print([[word for word in x] for x in sess.run(x)])
+
+        print("Epoch::", epoch, "average loss::", average_loss)
 
     #
     # print(train_loss.eval())

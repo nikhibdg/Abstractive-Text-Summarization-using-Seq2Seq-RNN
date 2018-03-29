@@ -2,9 +2,10 @@ import numpy as np
 filename = 'glove.6B.50d.txt'
 import csv
 import string
+from nltk import word_tokenize
 
 def clean(text):
-    text.lower()
+    text = text.lower()
     printable = set(string.printable)
     return filter(lambda x: x in printable, text)
 
@@ -19,8 +20,8 @@ with open('Reviews.csv', 'rb') as csvfile:
         if i==100000:
             break
 
-        texts.append(clean(row['Text']))
-        summaries.append(clean(row['Summary']))
+        texts.append(" ".join(word_tokenize(clean(row['Text']))))
+        summaries.append(" ".join(word_tokenize(clean(row['Summary']))))
 
 np.savetxt('text.txt', texts, delimiter='\n', fmt="%s")
 np.savetxt('summary.txt', summaries, delimiter='\n', fmt="%s")
