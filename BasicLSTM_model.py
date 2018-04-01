@@ -5,8 +5,9 @@ from tensorflow.python.ops import lookup_ops
 from tensorflow.python.layers.core import Dense
 
 emb_size = 50
-batch_size = 5
+batch_size = 10
 eos_id = 1
+sos_id = 2
 
 embedings = np.loadtxt("vocab_embedings.txt");
 vocab = np.loadtxt("vocab.txt", dtype="str");
@@ -40,13 +41,14 @@ dataset = dataset.map(
 
 dataset = dataset.map(
     lambda src, tgt: (src,
+                      tf.concat(([sos_id], tgt), 0),
                       tf.concat((tgt, [eos_id]), 0)),
     num_parallel_calls=2)
 
 # add length
 dataset = dataset.map(
-    lambda src, summary: (
-        src, summary, tf.size(src), tf.size(summary)),
+    lambda src, target_input, summary: (
+        src, target_input, summary, tf.size(src), tf.size(summary)),
     num_parallel_calls=2)
 
 
@@ -56,9 +58,11 @@ def batching_func(x):
         padded_shapes=(
             tf.TensorShape([None]),  # src
             tf.TensorShape([None]),
+            tf.TensorShape([None]),
             tf.TensorShape([]),
             tf.TensorShape([])),  # src_len
         padding_values=(
+            eos_id,  # src
             eos_id,  # src
             eos_id,  # src
             0,
@@ -96,7 +100,7 @@ def batching_func(x):
 dataset = batching_func(dataset)
 
 iterator = dataset.make_initializable_iterator()
-(inputs_index, label_index, input_sequence_length, labels_sequence_length) = iterator.get_next()
+(inputs_index, target_input, label_index, input_sequence_length, labels_sequence_length) = iterator.get_next()
 
 # To get embedings
 encoder_emb_inp = tf.nn.embedding_lookup(
@@ -119,7 +123,7 @@ with tf.Session() as sess:
     # print("seq shape", res[2].shape)
     # label_index = res[1]
     embedded_labels = tf.nn.embedding_lookup(
-        emb_mat, label_index)
+        emb_mat, target_input)
     # print("label indexxx------->", label_index.shape)
     # print("eeeeeeeemmmm   label indexxx------->", embedded_labels.shape)
 
@@ -201,7 +205,7 @@ with tf.Session() as sess:
     global_step = tf.Variable(0, trainable=False)
     inc_gstep = tf.assign(global_step, global_step + 1)
     learning_rate = tf.train.exponential_decay(
-        0.01, global_step, decay_steps=10, decay_rate=0.9, staircase=True)
+        0.03, global_step, decay_steps=10, decay_rate=0.9, staircase=True)
 
     # with tf.variable_scope('Adam'):
     adam_optimizer = tf.train.AdamOptimizer(learning_rate)
@@ -218,19 +222,23 @@ with tf.Session() as sess:
         sess.run(iterator.initializer, feed_dict=None)
         average_loss = 0;
         for step in range(1000):
-            _, l, pred, o_i = sess.run([adam_optimize, train_loss, train_prediction, label_index], feed_dict=None)
+            _, l, pred,t_i, o_i = sess.run([adam_optimize, train_loss, train_prediction,target_input, label_index], feed_dict=None)
             average_loss += l;
             if step == 0:
                 print("step 1 loss::", l)
-            print(".", step)
+            if step%100 > 90:
+                print(".", step)
 
             if step % 100 == 0:
                 x = reverse_vocab.lookup(tf.constant(pred, tf.int64))
-                print(o_i)
+                print("label ::",o_i)
+                print("target input ::", t_i)
                 print(pred)
                 print([[word for word in x] for x in sess.run(x)])
 
-        print("Epoch::", epoch, "average loss::", average_loss)
+        saver = tf.train.Saver()
+        save_path = saver.save(sess, "/tmp/model.ckpt")
+        print("Epoch::", epoch, "average loss::", average_loss/1000)
 
     #
     # print(train_loss.eval())

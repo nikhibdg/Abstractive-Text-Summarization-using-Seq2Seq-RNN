@@ -88,11 +88,14 @@ dataset_vocab_embedings = []
 
 i = 0
 
-dataset_vocab.append('unk')
-dataset_vocab_embedings.append(word2vec('unk'))
+dataset_vocab.append('<unk>')
+dataset_vocab_embedings.append(word2vec('<unk>'))
 
-dataset_vocab.append('eos')
-dataset_vocab_embedings.append(word2vec('eos'))
+dataset_vocab.append('<eos>')
+dataset_vocab_embedings.append(word2vec('<eos>'))
+
+dataset_vocab.append('<sos>')
+dataset_vocab_embedings.append(word2vec('<sos>'))
 
 for summary in summaries:
     i = i + 1
