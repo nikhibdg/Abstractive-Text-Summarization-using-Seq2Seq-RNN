@@ -39,7 +39,7 @@ with open('Reviews.csv', 'rb') as csvfile:
     i = 0
     for row in Reviews:
         i +=1
-        if i==100000:
+        if i==10000:
             break
 
         clean_text = clean(row['Text'])

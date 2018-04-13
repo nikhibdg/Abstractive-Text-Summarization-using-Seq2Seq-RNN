@@ -17,7 +17,7 @@ with open('Reviews.csv', 'rb') as csvfile:
     i = 0
     for row in Reviews:
         i +=1
-        if i==100000:
+        if i==10001:
             break
 
         texts.append(" ".join(word_tokenize(clean(row['Text']))))
