@@ -41,12 +41,12 @@ np.savetxt('raw_summary.txt_' + k, summaries, delimiter='\n', fmt="%s")
 text_files = ["raw_text.txt_1","raw_text.txt_2","raw_text.txt_3","raw_text.txt_4","raw_text.txt_5","raw_text.txt_68454"]
 summary_files = ["raw_summary.txt_1","raw_summary.txt_2","raw_summary.txt_3","raw_summary.txt_4","raw_summary.txt_5","raw_summary.txt_68454"]
 
-with open('summary.txt', 'w') as outfile:
+with open('raw_summary.txt', 'w') as outfile:
     for fname in summary_filessummary_files:
         with open(fname) as infile:
             outfile.write(infile.read())
 
-with open('text.txt', 'w') as outfile:
+with open('raw_text.txt', 'w') as outfile:
     for fname in text_files:
         with open(fname) as infile:
             outfile.write(infile.read())
