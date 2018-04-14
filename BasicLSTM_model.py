@@ -5,25 +5,32 @@ from tensorflow.python.ops import lookup_ops
 from tensorflow.python.layers.core import Dense
 
 emb_size = 50
-batch_size = 10
+batch_size = 100
 eos_id = 1
 sos_id = 2
 
-embedings = np.loadtxt("vocab_embedings.txt");
-vocab = np.loadtxt("vocab.txt", dtype="str");
-vocab_size = vocab.size
+########################## Data loading and preprocessing #######################
 
-dict = {word: embeding for (word, embeding) in zip(vocab, embedings)}
+text_vocab = lookup_ops.index_table_from_file(
+    "text_vocab.txt", default_value=0)
 
-emb_mat = tf.constant(embedings)
+summary_vocab = lookup_ops.index_table_from_file(
+    "summary_vocab.txt", default_value=0)
 
-vocab = lookup_ops.index_table_from_file(
-    "vocab.txt", default_value=0)
+summary_vocab_size = np.loadtxt("summary_vocab.txt", dtype="str").size
 
-reverse_vocab = tf.contrib.lookup.index_to_string_table_from_file("vocab.txt", default_value='unk')
+text_embedings = np.loadtxt("text_vocab_embedings.txt");
+text_emb_mat = tf.constant(text_embedings)
 
-src_dataset = tf.data.TextLineDataset("text.txt")
-tgt_dataset = tf.data.TextLineDataset("summary.txt")
+summary_embedings = np.loadtxt("summary_vocab_embedings.txt");
+summary_emb_mat = tf.constant(summary_embedings)
+
+
+reverse_text_vocab = tf.contrib.lookup.index_to_string_table_from_file("text_vocab.txt", default_value='<unk>')
+reverse_summary_vocab = tf.contrib.lookup.index_to_string_table_from_file("summary_vocab.txt", default_value='<unk>')
+
+src_dataset = tf.data.TextLineDataset("raw_text.txt")
+tgt_dataset = tf.data.TextLineDataset("raw_summary.txt")
 
 dataset = tf.data.Dataset.zip((src_dataset, tgt_dataset))
 
@@ -35,8 +42,8 @@ dataset = dataset.map(
 
 # word to index
 dataset = dataset.map(
-    lambda src, tgt: (tf.cast(vocab.lookup(src), tf.int32),
-                      tf.cast(vocab.lookup(tgt), tf.int32)),
+    lambda src, tgt: (tf.cast(text_vocab.lookup(src), tf.int32),
+                      tf.cast(summary_vocab.lookup(tgt), tf.int32)),
     num_parallel_calls=2)
 
 dataset = dataset.map(
@@ -102,61 +109,36 @@ dataset = batching_func(dataset)
 iterator = dataset.make_initializable_iterator()
 (inputs_index, target_input, label_index, input_sequence_length, labels_sequence_length) = iterator.get_next()
 
-# To get embedings
-encoder_emb_inp = tf.nn.embedding_lookup(
-    emb_mat, [1, 4, 5])
-
+0
 with tf.Session() as sess:
     sess.run(tf.tables_initializer())
     sess.run(iterator.initializer, feed_dict=None)
-    # res = sess.run(iterator.get_next())
 
-    # inputs_index = y[0]
+
+    ########################## Encoder #######################
+
 
     embedded_inputs = tf.nn.embedding_lookup(
-        emb_mat, inputs_index)
+        text_emb_mat, inputs_index)
 
-    # print("chkkk --->",inputs_index.shape)
-    # print("conversion", embedded_inputs.shape)
-
-    # input_sequence_length = res[2]
-    # print("seq shape", res[2].shape)
-    # label_index = res[1]
     embedded_labels = tf.nn.embedding_lookup(
-        emb_mat, target_input)
-    # print("label indexxx------->", label_index.shape)
-    # print("eeeeeeeemmmm   label indexxx------->", embedded_labels.shape)
+        summary_emb_mat, target_input)
 
-    # labels_sequence_length = res[3]
-    # print("out seq shape ", res[3].shape)
 
-    cell = tf.nn.rnn_cell.BasicLSTMCell(num_units=64)
+    cell = tf.nn.rnn_cell.LSTMCell(num_units=64)
     encoder_output, encoder_state = tf.nn.dynamic_rnn(
         cell=cell,
         dtype=tf.float64,
         sequence_length=input_sequence_length,
         inputs=embedded_inputs)
 
-    # sess.run(tf.global_variables_initializer())
-    # output = sess.run([encoder_output, encoder_state], feed_dict=None)
-    # print(output)
 
-    # result = tf.contrib.learn.run_n(
-    #     {"outputs": encoder_output, "last_states": encoder_state},
-    #     n=1,
-    #     feed_dict=None)
-    # print(result[0].get('outputs').shape)
+    ########################## Decoder #######################
 
-    # #
-    # # print(result[0].get('last_states')[0].shape)
-    # #
-    # # print(result[0].get('last_states')[1].shape)
-    #
-    # # Decoder
 
-    decoder_cell = tf.nn.rnn_cell.BasicLSTMCell(num_units=64)
+    decoder_cell = tf.nn.rnn_cell.LSTMCell(num_units=64)
 
-    projection_layer = Dense(units=vocab_size, use_bias=False)
+    projection_layer = Dense(units=summary_vocab_size, use_bias=False)
 
     helper = tf.contrib.seq2seq.TrainingHelper(
         embedded_labels, [tf.reduce_max(labels_sequence_length) for _ in range(batch_size)]
@@ -171,27 +153,10 @@ with tf.Session() as sess:
         swap_memory=False
     )
 
-    # result = tf.contrib.learn.run_n(
-    #     {"outputs": outputs, "states": output_states},
-    #     n=1,
-    #     feed_dict=None)
 
-    # sess.run(tf.global_variables_initializer())
-    #
-    # output = sess.run([outputs], feed_dict=None)
-    # print(output[0])
-    #
-    # output = sess.run([outputs], feed_dict=None)
-    # print(output[0])
-    #
-    # output = sess.run([outputs], feed_dict=None)
-    # print(output[0])
+    ########################## Loss and back propogation #######################
 
-    # print(result[0].get('outputs').rnn_output.shape)
-    # x = reverse_vocab.lookup(tf.constant(result[0].get('outputs').sample_id, tf.int64))
-    # print([[word.decode() for word in x] for x in sess.run(x)])
-    #
-    #
+
     # # calculate loss
     logits = outputs.rnn_output
 
@@ -215,13 +180,40 @@ with tf.Session() as sess:
     adam_optimize = adam_optimizer.apply_gradients(zip(adam_gradients, v))
     train_prediction = outputs.sample_id
 
+
+
+    ########################## inference #######################
+
+
+    def get_embeding(ids):
+        return tf.nn.embedding_lookup(
+            summary_emb_mat, ids)
+
+    infer_helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(
+    get_embeding, [sos_id for _ in range(batch_size)], eos_id)
+
+    infer_decoder = tf.contrib.seq2seq.BasicDecoder(
+        decoder_cell, infer_helper, encoder_state,
+        output_layer=projection_layer)
+
+    infer_outputs = tf.contrib.seq2seq.dynamic_decode(
+        infer_decoder, output_time_major=False,
+        swap_memory=False
+    )
+
+    infer_prediction = infer_outputs[0].sample_id
+
+
+    ################# Training #####################
+
+
     sess.run(tf.global_variables_initializer())
 
     average_loss = 0;
     for epoch in range(100):
         sess.run(iterator.initializer, feed_dict=None)
         average_loss = 0;
-        for step in range(1000):
+        for step in range(4000): # with batch size 100 this will be 400k data points.
             _, l, pred,t_i, o_i = sess.run([adam_optimize, train_loss, train_prediction,target_input, label_index], feed_dict=None)
             average_loss += l;
             if step == 0:
@@ -230,19 +222,13 @@ with tf.Session() as sess:
                 print(".", step)
 
             if step % 100 == 0:
-                x = reverse_vocab.lookup(tf.constant(pred, tf.int64))
+                x = reverse_summary_vocab.lookup(tf.constant(pred, tf.int64))
                 print("label ::",o_i)
                 print("target input ::", t_i)
                 print(pred)
                 print([[word for word in x] for x in sess.run(x)])
 
         saver = tf.train.Saver()
-        save_path = saver.save(sess, "/tmp/model.ckpt")
+        save_path = saver.save(sess, "./tmp/model.ckpt")
         print("Epoch::", epoch, "average loss::", average_loss/1000)
 
-    #
-    # print(train_loss.eval())
-    # print(result[1].size)
-
-    # res =sess.run(encoder_emb_inp)
-    # print(res)

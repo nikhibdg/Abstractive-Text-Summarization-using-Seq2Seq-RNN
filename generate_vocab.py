@@ -1,132 +1,45 @@
-import numpy as np
-filename = 'glove.6B.50d.txt'
-
-
-def loadGloVe(filename):
-    vocab = []
-    embd = []
-    file = open(filename,'r')
-    for line in file.readlines():
-        row = line.strip().split(' ')
-        vocab.append(row[0])
-        embd.append(row[1:])
-    print('GloVe Loaded.')
-    file.close()
-    return vocab,embd
-
-vocab,embd = loadGloVe(filename)
-
-embedding = np.asarray(embd)
-embedding = embedding.astype(np.float32)
-
-word_vec_dim = len(embd[0])
-
-import csv
 import nltk as nlp
-from nltk import word_tokenize
-import string
-
-summaries = []
-texts = []
-
-def clean(text):
-    text = text.lower()
-    printable = set(string.printable)
-    return filter(lambda x: x in printable, text)
-
-with open('Reviews.csv', 'rb') as csvfile:
-    Reviews = csv.DictReader(csvfile)
-    i = 0
-    for row in Reviews:
-        i +=1
-        if i==10000:
-            break
-
-        clean_text = clean(row['Text'])
-        clean_summary = clean(row['Summary'])
-        print(i)
-        summaries.append(word_tokenize(clean_summary))
-        texts.append(word_tokenize(clean_text))
-
-def np_nearest_neighbour(x):
-    #returns array in embedding that's most similar (in terms of cosine similarity) to x
-
-    xdoty = np.multiply(embedding,x)
-    xdoty = np.sum(xdoty,1)
-    xlen = np.square(x)
-    xlen = np.sum(xlen,0)
-    xlen = np.sqrt(xlen)
-    ylen = np.square(embedding)
-    ylen = np.sum(ylen,1)
-    ylen = np.sqrt(ylen)
-    xlenylen = np.multiply(xlen,ylen)
-    cosine_similarities = np.divide(xdoty,xlenylen)
-
-    return embedding[np.argmax(cosine_similarities)]
+import numpy as np
+import matplotlib.pyplot as plt
 
 
-def word2vec(word):
-    if word in vocab:
-        return embedding[vocab.index(word)]
-    else:
-        return embedding[vocab.index('unk')]
+def summary_vocab():
+    raw = open('raw_summary.txt').read()
+    tokens = nlp.word_tokenize(raw)
 
-def vec2word(vec):
-    for x in range(0, len(embedding)):
-            if np.array_equal(embedding[x],np.asarray(vec)):
-                return vocab[x]
-    return vec2word(np_nearest_neighbour(np.asarray(vec)))
+    fdist = nlp.FreqDist(tokens)
 
-# word = "king"
-# print("Vector representation of '"+str(vec2word(word2vec("kingdom")))+"':\n")
-print(np.dot(np.array(word2vec("king")), np.array(word2vec("King"))))
-print(np.dot(np.array(word2vec("king")), np.array(word2vec("king"))))
-# print(np.dot(np.array(word2vec("king")), np.array(word2vec("queen"))))
+    vocab = []
 
-dataset_vocab = []
-dataset_vocab_embedings = []
+    vocab.append("unk")
+    vocab.append("eos")
+    vocab.append("sos")
 
-i = 0
+    for word, frequency in fdist.most_common(50000):
+        if frequency >= 3:
+            vocab.append(word)
 
-dataset_vocab.append('<unk>')
-dataset_vocab_embedings.append(word2vec('<unk>'))
+    print "size of summary vocab :: ", len(vocab)
+    np.savetxt('summary_vocab.txt', vocab, delimiter='\n', fmt="%s")
 
-dataset_vocab.append('<eos>')
-dataset_vocab_embedings.append(word2vec('<eos>'))
+def text_vocab():
+    raw = open('raw_text.txt').read()
+    tokens = nlp.word_tokenize(raw)
 
-dataset_vocab.append('<sos>')
-dataset_vocab_embedings.append(word2vec('<sos>'))
+    fdist = nlp.FreqDist(tokens)
 
-for summary in summaries:
-    i = i + 1
-    print(i)
-    for word in summary:
-        if word not in dataset_vocab:
+    vocab = []
 
-            dataset_vocab.append(word)
-            dataset_vocab_embedings.append(word2vec(word))
+    vocab.append("unk")
+    vocab.append("eos")
+    vocab.append("sos")
 
-i = 0
+    for word, frequency in fdist.most_common(50000):
+        if frequency >= 5:
+            vocab.append(word)
 
-print("dataset vocal size::", len(dataset_vocab))
+    print "size of text vocab :: ", len(vocab)
+    np.savetxt('text_vocab.txt', vocab, delimiter='\n', fmt="%s")
 
-for text in texts:
-    i = i + 1
-    print(i)
-    for word in text:
-        if word not in dataset_vocab:
-
-            dataset_vocab.append(word)
-            dataset_vocab_embedings.append(word2vec(word))
-
-print("dataset vocal size::", len(dataset_vocab))
-
-np.savetxt('vocab.txt', dataset_vocab, delimiter='\n', fmt="%s")
-np.savetxt('vocab_embedings.txt', dataset_vocab_embedings, delimiter=' ')
-
-
-# import pickle
-# with open('dataset_vocab', 'wb') as fp:
-#     pickle.dump(dataset_vocab, fp)
-# with open('dataset_vocab_embedings', 'wb') as fp:
-#     pickle.dump(dataset_vocab_embedings, fp)
+summary_vocab()
+text_vocab()
