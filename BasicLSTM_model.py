@@ -5,7 +5,7 @@ from tensorflow.python.ops import lookup_ops
 from tensorflow.python.layers.core import Dense
 
 emb_size = 50
-batch_size = 100
+batch_size = 32
 sos_id = 1
 eos_id = 2
 
@@ -126,7 +126,7 @@ with tf.Session() as sess:
         summary_emb_mat, target_input)
 
 
-    cell = tf.nn.rnn_cell.LSTMCell(num_units=64)
+    cell = tf.nn.rnn_cell.LSTMCell(num_units=128)
     encoder_output, encoder_state = tf.nn.dynamic_rnn(
         cell=cell,
         dtype=tf.float64,
@@ -137,7 +137,7 @@ with tf.Session() as sess:
     ########################## Decoder #######################
 
 
-    decoder_cell = tf.nn.rnn_cell.LSTMCell(num_units=64)
+    decoder_cell = tf.nn.rnn_cell.LSTMCell(num_units=128)
 
     projection_layer = Dense(units=summary_vocab_size, use_bias=False)
 
@@ -210,26 +210,28 @@ with tf.Session() as sess:
 
     sess.run(tf.global_variables_initializer())
 
+    writer = tf.summary.FileWriter("/tmp/summary/basicModel/1")
+    writer.add_graph(sess.graph)
     average_loss = 0;
-    for epoch in range(100):
+    for epoch in range(20):
         sess.run(iterator.initializer, feed_dict=None)
         average_loss = 0;
         for step in range(4000): # with batch size 100 this will be 400k data points.
             _, l, pred,t_i, o_i = sess.run([adam_optimize, train_loss, train_prediction,target_input, label_index], feed_dict=None)
             average_loss += l;
-            if step == 0:
-                print("step 1 loss::", l)
-            if step%100 > 90:
-                print(".", step)
+            if step%500 == 0 and step != 0:
+                print("step "+ step +" loss::", l)
+            # if step%100 > 90:
+            #     print(".", step)
 
             if step % 100 == 0:
                 x = reverse_summary_vocab.lookup(tf.constant(pred, tf.int64))
-                print("label ::",o_i)
-                print("target input ::", t_i)
-                print(pred)
+                # print("label ::",o_i)
+                # print("target input ::", t_i)
+                # print(pred)
                 print([[word for word in x] for x in sess.run(x)])
 
         saver = tf.train.Saver()
         save_path = saver.save(sess, "./tmp/model.ckpt")
-        print("Epoch::", epoch, "average loss::", average_loss/1000)
+        print("Epoch::", epoch, "average loss::", average_loss/4000)
 
