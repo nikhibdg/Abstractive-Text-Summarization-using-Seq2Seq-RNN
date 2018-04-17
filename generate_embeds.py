@@ -63,7 +63,6 @@ def summary_embeds():
 
     np.savetxt('summary_vocab_embedings.txt', embd, delimiter=' ')
 
-
 def text_embeds():
     embd = []
     i = 0;

@@ -6,8 +6,8 @@ from tensorflow.python.layers.core import Dense
 
 emb_size = 50
 batch_size = 100
-eos_id = 1
-sos_id = 2
+sos_id = 1
+eos_id = 2
 
 ########################## Data loading and preprocessing #######################
 
@@ -25,6 +25,7 @@ text_emb_mat = tf.constant(text_embedings)
 summary_embedings = np.loadtxt("summary_vocab_embedings.txt");
 summary_emb_mat = tf.constant(summary_embedings)
 
+print summary_vocab
 
 reverse_text_vocab = tf.contrib.lookup.index_to_string_table_from_file("text_vocab.txt", default_value='<unk>')
 reverse_summary_vocab = tf.contrib.lookup.index_to_string_table_from_file("summary_vocab.txt", default_value='<unk>')

@@ -155,7 +155,7 @@ with tf.Session() as sess:
     decoder = tf.contrib.seq2seq.BasicDecoder(
         decoder_cell, helper, decoder_initial_state,
         output_layer=projection_layer)
-
+    
     """Dnamic decoder"""
 
     outputs, output_states, output_seq_length = tf.contrib.seq2seq.dynamic_decode(
