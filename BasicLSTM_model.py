@@ -30,7 +30,6 @@ text_emb_mat = tf.constant(text_embedings)
 summary_embedings = np.loadtxt("summary_vocab_embedings.txt");
 summary_emb_mat = tf.constant(summary_embedings)
 
-print summary_vocab
 
 reverse_text_vocab = tf.contrib.lookup.index_to_string_table_from_file("text_vocab.txt", default_value='<unk>')
 reverse_summary_vocab = tf.contrib.lookup.index_to_string_table_from_file("summary_vocab.txt", default_value='<unk>')
@@ -115,7 +114,7 @@ dataset = batching_func(dataset)
 iterator = dataset.make_initializable_iterator()
 (inputs_index, target_input, label_index, input_sequence_length, labels_sequence_length) = iterator.get_next()
 
-0
+
 with tf.Session() as sess:
     sess.run(tf.tables_initializer())
     sess.run(iterator.initializer, feed_dict=None)
@@ -214,7 +213,7 @@ with tf.Session() as sess:
 
 
     sess.run(tf.global_variables_initializer())
-
+    saver = tf.train.Saver()
     writer = tf.summary.FileWriter("/tmp/summary/basicModel/1")
     writer.add_graph(sess.graph)
     average_loss = 0;
@@ -225,18 +224,18 @@ with tf.Session() as sess:
             _, l, pred,t_i, o_i = sess.run([adam_optimize, train_loss, train_prediction,target_input, label_index], feed_dict=None)
             average_loss += l;
             if step%500 == 0 and step != 0:
-                print("step "+ step +" loss::", l)
+                print("step "+ str(step) +" loss::", average_loss/step)
             # if step%100 > 90:
             #     print(".", step)
 
-            if step % 100 == 0:
+            if step % 500 == 0:
                 x = reverse_summary_vocab.lookup(tf.constant(pred, tf.int64))
                 # print("label ::",o_i)
                 # print("target input ::", t_i)
                 # print(pred)
                 print([[word for word in x] for x in sess.run(x)])
 
-        saver = tf.train.Saver()
+        # saver = tf.train.Saver()
         save_path = saver.save(sess, "./tmp/model.ckpt")
         print("Epoch::", epoch, "average loss::", average_loss/steps)
 
