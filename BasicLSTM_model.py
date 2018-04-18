@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.ops import lookup_ops
 from tensorflow.python.layers.core import Dense
+from nltk.translate.bleu_score import corpus_bleu
 
 emb_size = 50
 batch_size = 32
@@ -29,7 +30,6 @@ text_emb_mat = tf.constant(text_embedings)
 
 summary_embedings = np.loadtxt("summary_vocab_embedings.txt");
 summary_emb_mat = tf.constant(summary_embedings)
-
 
 reverse_text_vocab = tf.contrib.lookup.index_to_string_table_from_file("text_vocab.txt", default_value='<unk>')
 reverse_summary_vocab = tf.contrib.lookup.index_to_string_table_from_file("summary_vocab.txt", default_value='<unk>')
@@ -114,21 +114,17 @@ dataset = batching_func(dataset)
 iterator = dataset.make_initializable_iterator()
 (inputs_index, target_input, label_index, input_sequence_length, labels_sequence_length) = iterator.get_next()
 
-
 with tf.Session() as sess:
     sess.run(tf.tables_initializer())
     sess.run(iterator.initializer, feed_dict=None)
 
-
     ########################## Encoder #######################
-
 
     embedded_inputs = tf.nn.embedding_lookup(
         text_emb_mat, inputs_index)
 
     embedded_labels = tf.nn.embedding_lookup(
         summary_emb_mat, target_input)
-
 
     cell = tf.nn.rnn_cell.LSTMCell(num_units=128)
     encoder_output, encoder_state = tf.nn.dynamic_rnn(
@@ -137,9 +133,7 @@ with tf.Session() as sess:
         sequence_length=input_sequence_length,
         inputs=embedded_inputs)
 
-
     ########################## Decoder #######################
-
 
     decoder_cell = tf.nn.rnn_cell.LSTMCell(num_units=128)
 
@@ -158,9 +152,7 @@ with tf.Session() as sess:
         swap_memory=False
     )
 
-
     ########################## Loss and back propogation #######################
-
 
     # # calculate loss
     logits = outputs.rnn_output
@@ -186,16 +178,15 @@ with tf.Session() as sess:
     train_prediction = outputs.sample_id
 
 
-
     ########################## inference #######################
-
 
     def get_embeding(ids):
         return tf.nn.embedding_lookup(
             summary_emb_mat, ids)
 
+
     infer_helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(
-    get_embeding, [sos_id for _ in range(batch_size)], eos_id)
+        get_embeding, [sos_id for _ in range(batch_size)], eos_id)
 
     infer_decoder = tf.contrib.seq2seq.BasicDecoder(
         decoder_cell, infer_helper, encoder_state,
@@ -208,9 +199,7 @@ with tf.Session() as sess:
 
     infer_prediction = infer_outputs[0].sample_id
 
-
     ################# Training #####################
-
 
     sess.run(tf.global_variables_initializer())
     saver = tf.train.Saver()
@@ -220,11 +209,12 @@ with tf.Session() as sess:
     for epoch in range(epochs):
         sess.run(iterator.initializer, feed_dict=None)
         average_loss = 0;
-        for step in range(steps): # with batch size 100 this will be 400k data points.
-            _, l, pred,t_i, o_i = sess.run([adam_optimize, train_loss, train_prediction,target_input, label_index], feed_dict=None)
+        for step in range(steps):  # with batch size 100 this will be 400k data points.
+            _, l, pred, t_i, o_i = sess.run([adam_optimize, train_loss, train_prediction, target_input, label_index],
+                                            feed_dict=None)
             average_loss += l;
-            if step%500 == 0 and step != 0:
-                print("step "+ str(step) +" loss::", average_loss/step)
+            if step % 500 == 0 and step != 0:
+                print("step " + str(step) + " loss::", average_loss / step)
             # if step%100 > 90:
             #     print(".", step)
 
@@ -237,5 +227,21 @@ with tf.Session() as sess:
 
         # saver = tf.train.Saver()
         save_path = saver.save(sess, "./tmp/model.ckpt")
-        print("Epoch::", epoch, "average loss::", average_loss/steps)
+        print("Epoch::", epoch, "average loss::", average_loss / steps)
 
+    ########################## BLUE score ###########################
+
+    total_blue_score = 0;
+    for step in range(test_steps):  # with batch size 32 this will be 1k data points.
+        pred, o_i, seq_lens = sess.run([infer_prediction, label_index, labels_sequence_length], feed_dict=None)
+        x = reverse_summary_vocab.lookup(tf.constant(pred, tf.int64))
+
+        pred_sentence = [[word for word in x] for x in sess.run(x)]
+
+        y = reverse_summary_vocab.lookup(tf.constant(o_i, tf.int64))
+        label_sentence = [[word for word in o] for o in sess.run(y)]
+        label_sentence =  [s[:l] for s, l in zip(label_sentence, seq_lens)]
+
+        total_blue_score += corpus_bleu(pred_sentence, label_sentence)
+
+    print("average BLUE SCORE :: ", total_blue_score / test_steps)
