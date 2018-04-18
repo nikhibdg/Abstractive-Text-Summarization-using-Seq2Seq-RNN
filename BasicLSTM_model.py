@@ -9,6 +9,11 @@ batch_size = 32
 sos_id = 1
 eos_id = 2
 
+epochs = 12
+steps = 3000
+
+test_steps = 30
+
 ########################## Data loading and preprocessing #######################
 
 text_vocab = lookup_ops.index_table_from_file(
@@ -213,10 +218,10 @@ with tf.Session() as sess:
     writer = tf.summary.FileWriter("/tmp/summary/basicModel/1")
     writer.add_graph(sess.graph)
     average_loss = 0;
-    for epoch in range(20):
+    for epoch in range(epochs):
         sess.run(iterator.initializer, feed_dict=None)
         average_loss = 0;
-        for step in range(4000): # with batch size 100 this will be 400k data points.
+        for step in range(steps): # with batch size 100 this will be 400k data points.
             _, l, pred,t_i, o_i = sess.run([adam_optimize, train_loss, train_prediction,target_input, label_index], feed_dict=None)
             average_loss += l;
             if step%500 == 0 and step != 0:
@@ -233,5 +238,5 @@ with tf.Session() as sess:
 
         saver = tf.train.Saver()
         save_path = saver.save(sess, "./tmp/model.ckpt")
-        print("Epoch::", epoch, "average loss::", average_loss/4000)
+        print("Epoch::", epoch, "average loss::", average_loss/steps)
 
