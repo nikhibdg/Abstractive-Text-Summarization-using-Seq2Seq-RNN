@@ -273,7 +273,7 @@ with tf.Session() as sess:
 
         total_blue_score += corpus_bleu(pred_sentence, label_sentence)
 
-        print pred_sentence
+        print (pred_sentence)
 
     print("average BLUE SCORE :: ", total_blue_score / test_steps)
     # file.write("average BLUE SCORE :: "+ str(total_blue_score / test_steps))
