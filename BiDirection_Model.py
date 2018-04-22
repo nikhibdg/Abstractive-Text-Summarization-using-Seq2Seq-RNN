@@ -6,13 +6,20 @@ from tensorflow.python.layers.core import Dense
 from nltk.translate.bleu_score import corpus_bleu
 import os
 
+import sys
+old_stdout = sys.stdout
+
+log_file = open("./logs/bidirectin_log.txt","w")
+
+sys.stdout = log_file
+
 emb_size = 50
-batch_size = 32
+batch_size = 2
 sos_id = 1
 eos_id = 2
 
 epochs = 100
-steps = 3000
+steps = 1
 
 test_steps = 10
 
@@ -270,3 +277,6 @@ with tf.Session() as sess:
 
     print("average BLUE SCORE :: ", total_blue_score / test_steps)
     # file.write("average BLUE SCORE :: "+ str(total_blue_score / test_steps))
+
+sys.stdout = old_stdout
+log_file.close()
