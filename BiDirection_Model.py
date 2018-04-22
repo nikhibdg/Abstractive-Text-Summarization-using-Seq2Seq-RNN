@@ -14,12 +14,12 @@ log_file = open("./logs/bidirectin_log.txt","w")
 sys.stdout = log_file
 
 emb_size = 50
-batch_size = 2
+batch_size = 32
 sos_id = 1
 eos_id = 2
 
 epochs = 100
-steps = 1
+steps = 3000
 
 test_steps = 10
 
