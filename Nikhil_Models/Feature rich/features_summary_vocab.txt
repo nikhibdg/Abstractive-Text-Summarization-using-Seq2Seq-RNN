@@ -1,0 +1,3 @@
+unk/NN
+zebra/NN
+END/NN
